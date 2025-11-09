@@ -1,22 +1,28 @@
 *** Settings ***
 Library    RequestsLibrary
+Library    OperatingSystem
+Library    Collections
 
 *** Variables ***
 ${TVMAZE_BASE}    https://api.tvmaze.com
 
 *** Keywords ***
 Create TVMaze Session
-    Create Session    tvmaze    ${TVMAZE_BASE}
+    Create Session    tvmaze    ${TVMAZE_BASE}  verify=false  disable_warnings=True
+    Disable TLS Warning
+    Log To Console    \n─────────────────────────────────────────────
 
 Search Show
     [Arguments]    ${query}
     ${params}=    Create Dictionary    q=${query}
     ${response}=    GET On Session    tvmaze    /search/shows    params=${params}    expected_status=any
+    Response Time Should Be Below    ${response}    0.6      Search Show
     RETURN    ${response}
 
 Get Show By Id
     [Arguments]    ${id}
     ${response}=    GET On Session    tvmaze    /shows/${id}    expected_status=any
+    Response Time Should Be Below    ${response}    0.3     Get Show By Id
     RETURN    ${response}
 
 Extract First Show Id From Search
@@ -31,6 +37,16 @@ Assert Show URL Contains Id
     ${url}=     Set Variable    ${json['url']}
     ${id_as_string}=    Convert To String    ${id}
     Should Contain    ${url}    ${id_as_string}
+
+Response Time Should Be Below
+    [Arguments]    ${response}    ${max_time}=0.5    ${label}=API Call
+    ${elapsed}=    Call Method    ${response.elapsed}    total_seconds
+    Log To Console    \n--- PERFORMANCE (${label}) ---
+    Log To Console    Response Time: ${elapsed}s
+    Log To Console    Limit: ${max_time}s
+    Log To Console    -------------------------------------
+    Should Be True    ${elapsed} < ${max_time}    Performance failure: ${label} took ${elapsed}s (limit ${max_time}s)
+
 
 Log TVMaze Response Info
     [Arguments]    ${response}
@@ -60,4 +76,7 @@ Log Show Details
     Log To Console    Show Name: ${json['name']}
     Log To Console    Page URL: ${json['url']}
     Log To Console    Show ID: ${json['id']}
+
+Disable TLS Warning
+    Set Environment Variable    PYTHONWARNINGS    ignore:InsecureRequestWarning
 
