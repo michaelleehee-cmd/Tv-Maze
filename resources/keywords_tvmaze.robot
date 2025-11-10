@@ -7,6 +7,38 @@ Library    Collections
 ${TVMAZE_BASE}    https://api.tvmaze.com
 
 *** Keywords ***
+# BDD style keywords
+Given TVMaze API Is Available
+    Create TVMaze Session
+
+When I Search For Show
+    [Arguments]    ${query}
+    ${response}=    Search Show    ${query}
+    Set Test Variable    ${response}
+
+When I Retrieve Show Details By Id
+    [Arguments]    ${id}
+    ${response}=    Get Show By Id    ${id}
+    Set Test Variable    ${response}
+
+Then The Search Should Succeed
+    Should Be Equal As Integers    ${response.status_code}    200
+
+Then The Show Details Should Succeed
+    Should Be Equal As Integers    ${response.status_code}    200
+
+And I Extract The First Show Id
+    ${show_id}=    Extract First Show Id From Search    ${response}
+    Set Test Variable    ${show_id}
+
+And The Show URL Should Contain The Show Id
+    Assert Show URL Contains Id    ${response}    ${show_id}
+
+And I Log The TVMaze Response
+    Log TVMaze Response Info    ${response}
+
+
+#Technical keywords
 Create TVMaze Session
     Create Session    tvmaze    ${TVMAZE_BASE}  verify=false  disable_warnings=True
     Disable TLS Warning
